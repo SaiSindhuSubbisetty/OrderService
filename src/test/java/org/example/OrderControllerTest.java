@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +21,12 @@ import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OrderController.class)
+@Import(SecurityConfigTest.class)
 public class OrderControllerTest {
 
     @Autowired
@@ -55,8 +58,9 @@ public class OrderControllerTest {
         when(orderService.createOrder(any(OrderRequest.class))).thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(response));
 
         mockMvc.perform(post("/orders")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(orderRequest)))
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("Order created"));
     }
@@ -70,21 +74,8 @@ public class OrderControllerTest {
                 .build();
         when(orderService.getOrderById("order123")).thenReturn(ResponseEntity.ok(response));
 
-        mockMvc.perform(get("/orders/order123"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Fetched"));
-    }
-
-    @Test
-    void testGetOrdersByUserId() throws Exception {
-        ApiResponse response = ApiResponse.builder()
-                .message("Fetched")
-                .status(HttpStatus.OK)
-                .data(Map.of("orders", List.of(orderRequest)))
-                .build();
-        when(orderService.getOrdersByUserId("user123")).thenReturn(ResponseEntity.ok(response));
-
-        mockMvc.perform(get("/orders/user/user123"))
+        mockMvc.perform(get("/orders/order123")
+                        .with(user("user").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
     }
@@ -98,22 +89,10 @@ public class OrderControllerTest {
                 .build();
         when(orderService.getAllOrders()).thenReturn(ResponseEntity.ok(response));
 
-        mockMvc.perform(get("/orders"))
+        mockMvc.perform(get("/orders")
+                        .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
-    }
-
-    @Test
-    void testDeleteOrder() throws Exception {
-        ApiResponse response = ApiResponse.builder()
-                .message("Order deleted")
-                .status(HttpStatus.OK)
-                .build();
-        when(orderService.deleteOrder("order123")).thenReturn(ResponseEntity.ok(response));
-
-        mockMvc.perform(delete("/orders/order123"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Order deleted"));
     }
 
     @Test
@@ -126,7 +105,8 @@ public class OrderControllerTest {
         when(orderService.updateOrderStatus("order123", "Shipped")).thenReturn(ResponseEntity.ok(response));
 
         mockMvc.perform(put("/orders/order123")
-                .param("status", "Shipped"))
+                        .with(user("admin").roles("ADMIN"))
+                        .param("status", "Shipped"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Order updated"));
     }

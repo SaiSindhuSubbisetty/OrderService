@@ -34,11 +34,6 @@ public class OrderController {
         return orderService.getAllOrders();
     }
 
-    @DeleteMapping("/{orderId}")
-    public ResponseEntity<ApiResponse> deleteOrder(@PathVariable String orderId) {
-        return orderService.deleteOrder(orderId);
-    }
-
     @PutMapping("/{orderId}")
     public ResponseEntity<ApiResponse> updateOrderStatus(@PathVariable String orderId,
                                                          @RequestParam String status) {

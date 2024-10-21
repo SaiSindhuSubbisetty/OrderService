@@ -9,17 +9,34 @@ import org.example.models.User;
 import org.example.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static org.example.constants.Constants.*;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getUsername())
+                .password(user.getPassword())
+                .build();
+    }
 
     public ResponseEntity<ApiResponse> createUser(UserRequest request) {
         try {
@@ -27,7 +44,7 @@ public class UserService {
 
             User user = User.builder()
                     .username(request.getUsername())
-                    .password(request.getPassword())
+                    .password(passwordEncoder.encode(request.getPassword()))  // Encode password before saving
                     .build();
 
             userRepository.save(user);
@@ -65,7 +82,7 @@ public class UserService {
         validateUserCredentials(request.getUsername(), request.getPassword());
 
         User user = userRepository.findByUsername(request.getUsername())
-                .filter(u -> u.getPassword().equals(request.getPassword()))
+                .filter(u -> passwordEncoder.matches(request.getPassword(), u.getPassword()))  // Check encoded password
                 .orElseThrow(() -> new InvalidUsernameAndPasswordException("Invalid username or password"));
 
         ApiResponse response = ApiResponse.builder()
