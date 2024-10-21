@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,51 +51,71 @@ class OrderServiceTest {
 
     @Test
     void testCreateOrder() {
-        // Arrange
         when(orderRepository.save(any(Order.class))).thenReturn(order);
 
-        // Act
         ResponseEntity<ApiResponse> response = orderService.createOrder(orderRequest);
 
-        // Assert
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals("Order created successfully", response.getBody().getMessage());
         assertNotNull(response.getBody().getData().get("order"));
+
+        verify(orderRepository).save(any(Order.class));
     }
 
     @Test
     void testGetOrderById_Success() {
-        // Arrange
         when(orderRepository.findById("orderId")).thenReturn(Optional.of(order));
 
-        // Act
         ResponseEntity<ApiResponse> response = orderService.getOrderById("orderId");
 
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Fetched successfully", response.getBody().getMessage());
+        verify(orderRepository).findById("orderId");
     }
 
     @Test
     void testGetOrderById_NotFound() {
-        // Arrange
         when(orderRepository.findById("invalidOrderId")).thenReturn(Optional.empty());
 
-        // Act & Assert
         OrderNotFoundException exception = assertThrows(OrderNotFoundException.class,
                 () -> orderService.getOrderById("invalidOrderId"));
         assertEquals("Order not found", exception.getMessage());
+
+        verify(orderRepository).findById("invalidOrderId");
+    }
+
+    @Test
+    void testGetOrdersByUserId_Success() {
+        when(orderRepository.findAllByUserId("userId")).thenReturn(Collections.singletonList(order));
+
+        ResponseEntity<ApiResponse> response = orderService.getOrdersByUserId("userId");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Fetched successfully", response.getBody().getMessage());
+        assertEquals(1, ((List<OrderResponse>) response.getBody().getData().get("orders")).size());
+
+        verify(orderRepository).findAllByUserId("userId");
+    }
+
+    @Test
+    void testGetAllOrders_Success() {
+        when(orderRepository.findAll()).thenReturn(Collections.singletonList(order));
+
+        ResponseEntity<ApiResponse> response = orderService.getAllOrders();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Fetched successfully", response.getBody().getMessage());
+        assertEquals(1, ((List<OrderResponse>) response.getBody().getData().get("orders")).size());
+
+        verify(orderRepository).findAll();
     }
 
     @Test
     void testDeleteOrder_Success() {
-        // Arrange
         when(orderRepository.findById("orderId")).thenReturn(Optional.of(order));
 
-        // Act
         ResponseEntity<ApiResponse> response = orderService.deleteOrder("orderId");
 
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Order deleted successfully", response.getBody().getMessage());
         verify(orderRepository).delete(order);
@@ -102,48 +123,50 @@ class OrderServiceTest {
 
     @Test
     void testDeleteOrder_NotFound() {
-        // Arrange
         when(orderRepository.findById("invalidOrderId")).thenReturn(Optional.empty());
 
-        // Act & Assert
         OrderNotFoundException exception = assertThrows(OrderNotFoundException.class,
                 () -> orderService.deleteOrder("invalidOrderId"));
+
         assertEquals("Order not found", exception.getMessage());
+
+        verify(orderRepository).findById("invalidOrderId");
     }
 
     @Test
     void testUpdateOrderStatus_Success() {
-        // Arrange
         when(orderRepository.findById("orderId")).thenReturn(Optional.of(order));
 
-        // Act
         ResponseEntity<ApiResponse> response = orderService.updateOrderStatus("orderId", "Shipped");
 
-        // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Order status updated successfully", response.getBody().getMessage());
         assertEquals("Shipped", order.getStatus());
+
+        verify(orderRepository).save(order);
     }
 
     @Test
     void testUpdateOrderStatus_OrderNotFound() {
-        // Arrange
         when(orderRepository.findById("invalidOrderId")).thenReturn(Optional.empty());
 
-        // Act & Assert
         OrderNotFoundException exception = assertThrows(OrderNotFoundException.class,
                 () -> orderService.updateOrderStatus("invalidOrderId", "Shipped"));
+
         assertEquals("Order not found", exception.getMessage());
+
+        verify(orderRepository).findById("invalidOrderId");
     }
 
     @Test
     void testUpdateOrderStatus_OrderIsMisplaced() {
-        // Arrange
         when(orderRepository.findById("orderId")).thenReturn(Optional.of(order));
 
-        // Act & Assert
         OrderIsMisplacedException exception = assertThrows(OrderIsMisplacedException.class,
                 () -> orderService.updateOrderStatus("orderId", "Misplaced"));
+
         assertEquals("The order has been marked as misplaced.", exception.getMessage());
+
+        verify(orderRepository, never()).save(any(Order.class));
     }
 }
