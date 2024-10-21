@@ -94,6 +94,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
                 .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
 
+        verify(userService, never()).createUser(any(UserRequest.class));
+
     }
 
 
@@ -127,6 +129,8 @@ class UserControllerTest {
 
         mockMvc.perform(get("/users/{userId}", userId))
                 .andExpect(status().isNotFound());
+
+        verify(userService, never()).createUser(any(UserRequest.class));
 
     }
 
@@ -199,6 +203,8 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(result -> assertTrue(result.getResolvedException() instanceof InvalidUsernameAndPasswordException))
                 .andExpect(result -> assertEquals("Invalid credentials", result.getResolvedException().getMessage()));
+
+        verify(userService, never()).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -213,6 +219,8 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
                 .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
+
+        verify(userService, never()).createUser(any(UserRequest.class));
 
     }
 
@@ -229,6 +237,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
                 .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
 
+        verify(userService, never()).createUser(any(UserRequest.class));
+
     }
 
     @Test
@@ -242,6 +252,8 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")));
+
+        verify(userService, never()).createUser(any(UserRequest.class));
 
     }
 
@@ -257,6 +269,8 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")));
 
+        verify(userService, never()).createUser(any(UserRequest.class));
+
     }
 
     @Test
@@ -270,6 +284,8 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", is("User not found")));
+
+        verify(userService, never()).createUser(any(UserRequest.class));
 
     }
 }

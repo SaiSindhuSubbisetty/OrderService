@@ -3,6 +3,8 @@ package org.example;
 import org.example.controllers.OrderController;
 import org.example.dto.ApiResponse;
 import org.example.dto.OrderRequest;
+import org.example.exceptions.OrderIsMisplacedException;
+import org.example.exceptions.OrderNotFoundException;
 import org.example.services.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,4 +120,33 @@ public class OrderControllerTest {
 
         verify(orderService,times(1)).updateOrderStatus("order123", "Shipped");
     }
+
+    @Test
+    void testGetOrderById_NotFound() throws Exception {
+        when(orderService.getOrderById("order123")).thenThrow(new OrderNotFoundException("Order not found"));
+
+        mockMvc.perform(get("/orders/order123")
+                        .with(user("user").roles("USER")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found"))
+                .andExpect(jsonPath("$.status").value("Order not found"));
+
+        verify(orderService, times(1)).getOrderById("order123");
+    }
+
+    @Test
+    void testCreateOrder_OrderIsMisplaced() throws Exception {
+        when(orderService.createOrder(any(OrderRequest.class))).thenThrow(new OrderIsMisplacedException("Order is misplaced"));
+
+        mockMvc.perform(post("/orders")
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Order is misplaced"))
+                .andExpect(jsonPath("$.status").value("Order is misplaced"));
+
+        verify(orderService, times(1)).createOrder(any(OrderRequest.class));
+    }
+
 }
