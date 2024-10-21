@@ -5,7 +5,9 @@ import org.example.dto.ApiResponse;
 import org.example.dto.UserRequest;
 import org.example.dto.UserResponse;
 import org.example.exceptions.InvalidUsernameAndPasswordException;
+import org.example.models.Order;
 import org.example.models.User;
+import org.example.repositories.OrderRepository;
 import org.example.repositories.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.example.constants.Constants.*;
@@ -25,6 +27,7 @@ import static org.example.constants.Constants.*;
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;  // Assuming you have an OrderRepository
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -89,6 +92,21 @@ public class UserService implements UserDetailsService {
                 .message(LOGIN_SUCCESS)
                 .status(HttpStatus.OK)
                 .data(Map.of("user", new UserResponse(user)))
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<ApiResponse> getOrdersByUserId(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        List<Order> orders = orderRepository.findAllByUserId(userId);
+
+        ApiResponse response = ApiResponse.builder()
+                .message(FETCHED)
+                .status(HttpStatus.OK)
+                .data(Map.of("orders", orders))
                 .build();
 
         return ResponseEntity.ok(response);

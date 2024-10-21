@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -63,6 +63,8 @@ public class OrderControllerTest {
                         .content(objectMapper.writeValueAsString(orderRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("Order created"));
+
+        verify(orderService,times(1)).createOrder(any(OrderRequest.class));
     }
 
     @Test
@@ -78,6 +80,8 @@ public class OrderControllerTest {
                         .with(user("user").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
+
+        verify(orderService,times(1)).getOrderById("order123");
     }
 
     @Test
@@ -93,6 +97,8 @@ public class OrderControllerTest {
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
+
+        verify(orderService,times(1)).getAllOrders();
     }
 
     @Test
@@ -109,5 +115,7 @@ public class OrderControllerTest {
                         .param("status", "Shipped"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Order updated"));
+
+        verify(orderService,times(1)).updateOrderStatus("order123", "Shipped");
     }
 }

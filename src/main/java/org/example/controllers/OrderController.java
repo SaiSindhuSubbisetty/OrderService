@@ -24,11 +24,6 @@ public class OrderController {
         return orderService.getOrderById(orderId);
     }
 
-    @GetMapping("/{orderId}/users/{userId}")
-    public ResponseEntity<ApiResponse> getOrdersByUserId(@PathVariable String userId) {
-        return orderService.getOrdersByUserId(userId);
-    }
-
     @GetMapping
     public ResponseEntity<ApiResponse> getAllOrders() {
         return orderService.getAllOrders();

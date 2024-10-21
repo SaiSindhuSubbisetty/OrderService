@@ -30,6 +30,11 @@ public class UserController {
         return userService.getUserById(userId);
     }
 
+    @GetMapping("/{userId}/orders/{orderId}")
+    public ResponseEntity<ApiResponse> getOrdersByUserId(@PathVariable String userId) {
+        return userService.getOrdersByUserId(userId);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> loginUser(@RequestBody UserRequest request) {
         return userService.loginUser(request);

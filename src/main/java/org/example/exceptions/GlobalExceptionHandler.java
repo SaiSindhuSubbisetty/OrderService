@@ -17,14 +17,6 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, String>> handleResponseStatusException(ResponseStatusException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                "message", ex.getReason(),
-                "status", "Bad request"
-        ));
-    }
-
     @ExceptionHandler(UnAuthorizedUserException.class)
     public ResponseEntity<Map<String, String>> handleUnAuthorizedUserException(UnAuthorizedUserException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
@@ -33,19 +25,30 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        return ResponseEntity.status(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "message", ex.getReason(),
+                "status", status != null ? status.getReasonPhrase() : "Internal Server Error"
+        ));
+    }
+
+
     @ExceptionHandler(InvalidUsernameAndPasswordException.class)
     public ResponseEntity<Map<String, String>> handleInvalidUsernameAndPasswordException(InvalidUsernameAndPasswordException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "message", ex.getMessage(),
-                "status", "Invalid username or password"
+                "status", "UNAUTHORIZED"
         ));
     }
+
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(Map.of(
                 "message", e.getMostSpecificCause().getMessage(),
-                "status", "Bad request"
+                "status", "BAD_REQUEST"
         ));
     }
 
@@ -82,5 +85,16 @@ public class GlobalExceptionHandler {
                 "status", "Order not found"
         ));
     }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "message", ex.getMessage(),
+                "status", "User not found"
+        ));
+    }
+
+
+
 
 }

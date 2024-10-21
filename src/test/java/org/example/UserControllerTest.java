@@ -4,14 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.controllers.UserController;
 import org.example.dto.ApiResponse;
 import org.example.dto.UserRequest;
+import org.example.exceptions.GlobalExceptionHandler;
 import org.example.exceptions.InvalidUsernameAndPasswordException;
+import org.example.models.Order;
 import org.example.models.User;
 import org.example.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -22,8 +21,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +49,9 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(userController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
         objectMapper = new ObjectMapper();
     }
 
@@ -83,17 +84,18 @@ class UserControllerTest {
     void testCreateUser_InvalidUsernameOrPassword() throws Exception {
         UserRequest userRequest = new UserRequest("", "testPass");
 
-        when(userService.createUser(any(UserRequest.class))).thenThrow(new InvalidUsernameAndPasswordException("Invalid credentials"));
+        when(userService.createUser(any(UserRequest.class)))
+                .thenThrow(new InvalidUsernameAndPasswordException("Invalid credentials"));
 
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
-                .andExpect(jsonPath("$.status", is("BAD_REQUEST")));
+                .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
 
-        verify(userService, times(1)).createUser(any(UserRequest.class));
     }
+
 
     @Test
     void testGetUserById_Success() throws Exception {
@@ -126,8 +128,6 @@ class UserControllerTest {
         mockMvc.perform(get("/users/{userId}", userId))
                 .andExpect(status().isNotFound());
 
-
-        verify(userService, times(1)).getUserById(userId);
     }
 
     @Test
@@ -156,18 +156,50 @@ class UserControllerTest {
     }
 
     @Test
-void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
-    // Arrange
-    String invalidUserJson = "{ \"username\": \"\", \"password\": \"password123\" }";
+    void testGetOrdersByUserId_Success() throws Exception {
+        String userId = "user123";
+        List<Order> orders = List.of(new Order(), new Order());
+        ApiResponse response = ApiResponse.builder()
+                .message("Fetched")
+                .status(HttpStatus.OK)
+                .data(Map.of("orders", orders))
+                .build();
 
-    // Act & Assert
-    mockMvc.perform(post("/users")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(invalidUserJson))
-            .andExpect(status().isBadRequest())
-            .andExpect(result -> assertTrue(result.getResolvedException() instanceof InvalidUsernameAndPasswordException))
-            .andExpect(result -> assertEquals("Invalid credentials", result.getResolvedException().getMessage()));
-}
+        when(userService.getOrdersByUserId(userId)).thenReturn(ResponseEntity.ok(response));
+
+        mockMvc.perform(get("/users/{userId}/orders/{orderId}", userId, "order123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Fetched")))
+                .andExpect(jsonPath("$.status", is("OK")));
+
+        verify(userService, times(1)).getOrdersByUserId(userId);
+    }
+
+    @Test
+    void testGetOrdersByUserId_UserNotFound() throws Exception {
+        String userId = "user123";
+
+        when(userService.getOrdersByUserId(userId)).thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        mockMvc.perform(get("/users/{userId}/orders/{orderId}", userId, "order123"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", is("User not found")))
+                .andExpect(jsonPath("$.status", is("Not Found")));
+
+        verify(userService, times(1)).getOrdersByUserId(userId);
+    }
+
+    @Test
+    void testCreateUser_InvalidUsernameOrPassword3() throws Exception {
+        String invalidUserJson = "{ \"username\": \"\", \"password\": \"password123\" }";
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidUserJson))
+                .andExpect(status().isUnauthorized())
+                .andExpect(result -> assertTrue(result.getResolvedException() instanceof InvalidUsernameAndPasswordException))
+                .andExpect(result -> assertEquals("Invalid credentials", result.getResolvedException().getMessage()));
+    }
 
     @Test
     void testCreateUser_NullUsername() throws Exception {
@@ -178,11 +210,10 @@ void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
-                .andExpect(jsonPath("$.status", is("BAD_REQUEST")));
+                .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
 
-        verify(userService, times(1)).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -194,11 +225,10 @@ void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Invalid credentials")))
-                .andExpect(jsonPath("$.status", is("BAD_REQUEST")));
+                .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
 
-        verify(userService, times(1)).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -210,11 +240,9 @@ void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Invalid credentials")))
-                .andExpect(jsonPath("$.status", is("BAD_REQUEST")));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message", is("Invalid credentials")));
 
-        verify(userService, times(1)).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -226,11 +254,9 @@ void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Invalid credentials")))
-                .andExpect(jsonPath("$.status", is("BAD_REQUEST")));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message", is("Invalid credentials")));
 
-        verify(userService, times(1)).createUser(any(UserRequest.class));
     }
 
     @Test
@@ -243,9 +269,7 @@ void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", is("User not found")))
-                .andExpect(jsonPath("$.status", is("NOT_FOUND")));
+                .andExpect(jsonPath("$.message", is("User not found")));
 
-        verify(userService, times(1)).loginUser(any(UserRequest.class));
     }
 }

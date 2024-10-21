@@ -4,7 +4,9 @@ import org.example.dto.ApiResponse;
 import org.example.dto.UserRequest;
 import org.example.dto.UserResponse;
 import org.example.exceptions.InvalidUsernameAndPasswordException;
+import org.example.models.Order;
 import org.example.models.User;
+import org.example.repositories.OrderRepository;
 import org.example.repositories.UserRepository;
 import org.example.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +29,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private OrderRepository orderRepository;
 
     @InjectMocks
     private UserService userService;
@@ -164,5 +170,42 @@ class UserServiceTest {
         assertEquals("Invalid username or password", exception.getMessage());
 
         verify(userRepository, times(1)).findByUsername(userRequest.getUsername());
+    }
+
+    @Test
+    void testGetOrdersByUserId_Success() {
+        String userId = "user123";
+        User user = new User();
+        user.setId(userId);
+        List<Order> orders = List.of(new Order(), new Order());
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(orderRepository.findAllByUserId(userId)).thenReturn(orders);
+
+        ResponseEntity<ApiResponse> response = userService.getOrdersByUserId(userId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Fetched successfully", response.getBody().getMessage());
+        assertEquals(orders, response.getBody().getData().get("orders"));
+
+        verify(userRepository, times(1)).findById(userId);
+        verify(orderRepository, times(1)).findAllByUserId(userId);
+    }
+
+    @Test
+    void testGetOrdersByUserId_UserNotFound() {
+        String userId = "user123";
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            userService.getOrdersByUserId(userId);
+        });
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        assertEquals("User not found", exception.getReason());
+
+        verify(userRepository, times(1)).findById(userId);
+        verify(orderRepository, times(0)).findAllByUserId(userId);
     }
 }
