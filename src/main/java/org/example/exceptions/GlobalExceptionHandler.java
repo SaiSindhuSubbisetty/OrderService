@@ -66,4 +66,21 @@ public class GlobalExceptionHandler {
                 "status", "Internal server error"
         ));
     }
+
+    @ExceptionHandler(OrderIsMisplacedException.class)
+    public ResponseEntity<Map<String, String>> handleOrderIsMisplacedException(OrderIsMisplacedException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "message", ex.getMessage(),
+                "status", "Order is misplaced"
+        ));
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleOrderNotFoundException(OrderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "message", ex.getMessage(),
+                "status", "Order not found"
+        ));
+    }
+
 }
