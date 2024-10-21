@@ -18,7 +18,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<ApiResponse> createUser(@RequestBody UserRequest request) {
-        if (request.getUsername().isEmpty() || request.getPassword().isEmpty()) {
+        if (request.getUsername() == null || request.getUsername().isEmpty() || request.getPassword() == null || request.getPassword().isEmpty()) {
             throw new InvalidUsernameAndPasswordException("Invalid credentials");
         }
         ApiResponse response = userService.createUser(request).getBody();

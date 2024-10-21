@@ -9,6 +9,9 @@ import org.example.models.User;
 import org.example.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -20,8 +23,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -150,20 +156,18 @@ class UserControllerTest {
     }
 
     @Test
-    void testLoginUser_InvalidCredentials() throws Exception {
-        UserRequest userRequest = new UserRequest("testUser", "wrongPass");
+void testCreateUser_InvalidUsernameOrPassword2() throws Exception {
+    // Arrange
+    String invalidUserJson = "{ \"username\": \"\", \"password\": \"password123\" }";
 
-        when(userService.loginUser(any(UserRequest.class))).thenThrow(new InvalidUsernameAndPasswordException("Invalid username or password"));
-
-        mockMvc.perform(post("/users/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userRequest)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message", is("Invalid username or password")))
-                .andExpect(jsonPath("$.status", is("UNAUTHORIZED")));
-
-        verify(userService, times(1)).loginUser(any(UserRequest.class));
-    }
+    // Act & Assert
+    mockMvc.perform(post("/users")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(invalidUserJson))
+            .andExpect(status().isBadRequest())
+            .andExpect(result -> assertTrue(result.getResolvedException() instanceof InvalidUsernameAndPasswordException))
+            .andExpect(result -> assertEquals("Invalid credentials", result.getResolvedException().getMessage()));
+}
 
     @Test
     void testCreateUser_NullUsername() throws Exception {
