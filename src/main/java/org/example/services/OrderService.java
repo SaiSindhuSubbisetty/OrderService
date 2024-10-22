@@ -1,10 +1,10 @@
 package org.example.services;
 
-import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import org.example.dto.ApiResponse;
 import org.example.dto.OrderRequest;
 import org.example.dto.OrderResponse;
+import org.example.exceptions.InternalServerErrorException;
 import org.example.exceptions.OrderIsMisplacedException;
 import org.example.exceptions.OrderNotFoundException;
 import org.example.models.Order;
