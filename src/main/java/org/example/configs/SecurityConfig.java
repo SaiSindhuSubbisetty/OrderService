@@ -6,13 +6,17 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import java.util.List;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -30,19 +34,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
+        MvcRequestMatcher h2ConsoleMatcher = new MvcRequestMatcher(introspector, "/h2-console/**");
+        h2ConsoleMatcher.setServletPath("/h2-console");
+
+        MvcRequestMatcher apiMatcher = new MvcRequestMatcher(introspector, "/**");
+        apiMatcher.setServletPath("/");
+
         http
-                .csrf(AbstractHttpConfigurer::disable)  // Disable CSRF for APIs
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // Enable CORS
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST).hasRole("ADMIN")  // Only ADMINs can POST
-                        .requestMatchers(HttpMethod.GET).permitAll()  // Allow GET requests for everyone
-                        .anyRequest().authenticated()  // Other requests require authentication
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(h2ConsoleMatcher).permitAll()
+                        .requestMatchers(apiMatcher).authenticated()
                 )
-                .httpBasic(Customizer.withDefaults())  // Enable HTTP Basic Authentication
-                .formLogin(AbstractHttpConfigurer::disable)  // Disable form login for APIs
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.sameOrigin())  // Use new API for frame options (sameOrigin)
+                .formLogin(withDefaults())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers(h2ConsoleMatcher)
                 );
 
         return http.build();
