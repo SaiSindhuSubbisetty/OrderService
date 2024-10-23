@@ -1,14 +1,19 @@
 package org.example.services;
 
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+
 import org.example.dto.ApiResponse;
+import org.example.dto.ItemResponse;
 import org.example.dto.OrderRequest;
 import org.example.dto.OrderResponse;
 import org.example.exceptions.InternalServerErrorException;
 import org.example.exceptions.OrderIsMisplacedException;
 import org.example.exceptions.OrderNotFoundException;
 import org.example.models.Order;
+import org.example.repositories.CatalogClient;
 import org.example.repositories.OrderRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -19,20 +24,34 @@ import java.util.Map;
 
 import static org.example.constants.Constants.*;
 
+
+
 @Service
 @RequiredArgsConstructor
 public class OrderService {
+
     private final OrderRepository orderRepository;
+
+    private final CatalogClient catalogClient;
 
     public ResponseEntity<ApiResponse> createOrder(OrderRequest request) {
         try {
+            List<ItemResponse> itemResponses = new ArrayList<>();
+            for (String itemId : request.getItems()) {
+                ItemResponse itemResponse = catalogClient.getItemById(itemId);
+                itemResponses.add(itemResponse);
+            }
+
+            double totalPrice = itemResponses.stream().mapToDouble(ItemResponse::getPrice).sum();
+
             Order order = Order.builder()
                     .userId(request.getUserId())
                     .items(request.getItems())
-                    .totalPrice(request.getTotalPrice())
+                    .totalPrice(totalPrice)
                     .status("Pending")
                     .build();
             orderRepository.save(order);
+
             ApiResponse response = ApiResponse.builder()
                     .message(ORDER_CREATED)
                     .status(HttpStatus.CREATED)

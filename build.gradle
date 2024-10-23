@@ -37,6 +37,8 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.0.5'// For Eureka Server
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    testImplementation 'jakarta.ws.rs:jakarta.ws.rs-api:3.0.0'
 }
 
 dependencyManagement {
