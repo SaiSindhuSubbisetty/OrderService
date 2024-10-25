@@ -3,6 +3,7 @@ package org.example;
 import org.example.controllers.OrderController;
 import org.example.dto.ApiResponse;
 import org.example.dto.OrderRequest;
+import org.example.exceptions.InternalServerErrorException;
 import org.example.exceptions.OrderIsMisplacedException;
 import org.example.exceptions.OrderNotFoundException;
 import org.example.services.OrderService;
@@ -66,7 +67,7 @@ public class OrderControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.message").value("Order created"));
 
-        verify(orderService,times(1)).createOrder(any(OrderRequest.class));
+        verify(orderService, times(1)).createOrder(any(OrderRequest.class));
     }
 
     @Test
@@ -83,7 +84,7 @@ public class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
 
-        verify(orderService,times(1)).getOrderById("order123");
+        verify(orderService, times(1)).getOrderById("order123");
     }
 
     @Test
@@ -100,7 +101,7 @@ public class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Fetched"));
 
-        verify(orderService,times(1)).getAllOrders();
+        verify(orderService, times(1)).getAllOrders();
     }
 
     @Test
@@ -118,7 +119,7 @@ public class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Order updated"));
 
-        verify(orderService,times(1)).updateOrderStatus("order123", "Shipped");
+        verify(orderService, times(1)).updateOrderStatus("order123", "Shipped");
     }
 
     @Test
@@ -147,6 +148,91 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.status").value("Order is misplaced"));
 
         verify(orderService, times(1)).createOrder(any(OrderRequest.class));
+    }
+
+    @Test
+    void testUpdateOrderStatus_FulfillmentServiceFailure() throws Exception {
+        when(orderService.updateOrderStatus("order123", "Shipped"))
+                .thenThrow(new InternalServerErrorException("Failed to update order status."));
+
+        mockMvc.perform(put("/orders/order123")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("status", "Shipped"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Failed to update order status."));
+
+        verify(orderService, times(1)).updateOrderStatus("order123", "Shipped");
+    }
+
+    @Test
+    void testUpdateOrderStatus_OrderNotFound() throws Exception {
+        when(orderService.updateOrderStatus("order123", "Shipped"))
+                .thenThrow(new OrderNotFoundException("Order not found"));
+
+        mockMvc.perform(put("/orders/order123")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("status", "Shipped"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found"));
+
+        verify(orderService, times(1)).updateOrderStatus("order123", "Shipped");
+    }
+
+    @Test
+    void testUpdateOrderStatus_OrderIsMisplaced() throws Exception {
+        when(orderService.updateOrderStatus("order123", "Misplaced"))
+                .thenThrow(new OrderIsMisplacedException("The order has been marked as misplaced."));
+
+        mockMvc.perform(put("/orders/order123")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("status", "Misplaced"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The order has been marked as misplaced."));
+
+        verify(orderService, times(1)).updateOrderStatus("order123", "Misplaced");
+    }
+
+    @Test
+    void testGetAllOrders_NoOrdersFound() throws Exception {
+        ApiResponse response = ApiResponse.builder()
+                .message("Fetched")
+                .status(HttpStatus.OK)
+                .data(Map.of("orders", List.of()))
+                .build();
+        when(orderService.getAllOrders()).thenReturn(ResponseEntity.ok(response));
+
+        mockMvc.perform(get("/orders")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Fetched"))
+                .andExpect(jsonPath("$.data.orders").isEmpty());
+
+        verify(orderService, times(1)).getAllOrders();
+    }
+
+    @Test
+    void testGetOrderById_FulfillmentServiceFailure() throws Exception {
+        when(orderService.getOrderById("order123"))
+                .thenThrow(new InternalServerErrorException("Fulfillment service failure"));
+
+        mockMvc.perform(get("/orders/order123")
+                        .with(user("user").roles("USER")))
+                .andExpect(status().isInternalServerError());
+
+        verify(orderService, times(1)).getOrderById("order123");
+    }
+
+    @Test
+    void testGetOrderById_OrderNotFound() throws Exception {
+        when(orderService.getOrderById("order123"))
+                .thenThrow(new OrderNotFoundException("Order not found"));
+
+        mockMvc.perform(get("/orders/order123")
+                        .with(user("user").roles("USER")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found"));
+
+        verify(orderService, times(1)).getOrderById("order123");
     }
 
 }

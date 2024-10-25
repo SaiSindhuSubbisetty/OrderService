@@ -34,4 +34,10 @@ public class OrderController {
                                                          @RequestParam String status) {
         return orderService.updateOrderStatus(orderId, status);
     }
+
+    @GetMapping("/test-fulfillment")
+    public ResponseEntity<ApiResponse> testFulfillment(@RequestParam String orderId) {
+        return orderService.getOrderById(orderId);
+    }
 }
+
