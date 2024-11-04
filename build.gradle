@@ -48,6 +48,7 @@ dependencies {
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
     implementation 'net.devh:grpc-spring-boot-starter:2.13.0.RELEASE'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
+    implementation 'org.liquibase:liquibase-core'
 
 }
 
